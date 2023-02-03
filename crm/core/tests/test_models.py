@@ -3,6 +3,7 @@ Test for models.
 """
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from core.models import Customer
 
 
 class ModelTests(TestCase):
@@ -118,3 +119,34 @@ class ModelTests(TestCase):
                 )
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_staff)
+
+    def test_create_customer(self):
+        """Test creating a new customer."""
+        email = 'test@email.com'
+        password = 'testpass123'
+        first_name = 'first_name'
+        last_name = 'last_name'
+        role = 'sales'
+        user_sales = get_user_model().objects.create_user(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            )
+        customer = Customer.objects.create(
+                first_name='first_name',
+                last_name='last_name',
+                email='customer@example.com',
+                phone='123456789',
+                mobile='987654321',
+                company='company',
+                sales_contact=user_sales,
+                )
+        self.assertEqual(customer.first_name, 'first_name')
+        self.assertEqual(customer.last_name, 'last_name')
+        self.assertEqual(customer.email, 'customer@example.com')
+        self.assertEqual(customer.phone, '123456789')
+        self.assertEqual(customer.mobile, '987654321')
+        self.assertEqual(customer.company, 'company')
+        self.assertEqual(customer.sales_contact, user_sales)
