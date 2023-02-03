@@ -81,3 +81,16 @@ class Customer(models.Model):
     date_updated = models.DateTimeField(auto_now=True)
     sales_contact = models.ForeignKey('User', on_delete=models.SET_NULL,
                                       null=True, blank=True)
+
+
+class Contract(models.Model):
+    """Contract class to store contract details."""
+    sales_contact = models.ForeignKey('User', on_delete=models.SET_NULL,
+                                      null=True, blank=True)
+    customer = models.ForeignKey('Customer', on_delete=models.SET_NULL,
+                                 null=True, blank=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=False)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_due = models.DateField()

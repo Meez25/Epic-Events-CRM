@@ -1,9 +1,11 @@
 """
 Test for models.
 """
+import datetime
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from core.models import Customer
+from core.models import Customer, Contract
 
 
 class ModelTests(TestCase):
@@ -150,3 +152,40 @@ class ModelTests(TestCase):
         self.assertEqual(customer.mobile, '987654321')
         self.assertEqual(customer.company, 'company')
         self.assertEqual(customer.sales_contact, user_sales)
+
+    def test_create_contract(self):
+        """Test creating a new contract."""
+        email = 'test@email.com'
+        password = 'testpass123'
+        first_name = 'first_name'
+        last_name = 'last_name'
+        role = 'sales'
+        user_sales = get_user_model().objects.create_user(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            )
+        customer = Customer.objects.create(
+                first_name='first_name',
+                last_name='last_name',
+                email='customer@example.com',
+                phone='123456789',
+                mobile='987654321',
+                company='company',
+                sales_contact=user_sales,
+                )
+        contract = Contract.objects.create(
+                sales_contact=user_sales,
+                customer=customer,
+                status=True,
+                amount=100.0,
+                payment_due=datetime.datetime(2019, 1, 1, 0, 0),
+                )
+        self.assertEqual(contract.sales_contact, user_sales)
+        self.assertEqual(contract.customer, customer)
+        self.assertEqual(contract.status, True)
+        self.assertEqual(contract.amount, 100.0)
+        self.assertEqual(contract.payment_due,
+                         datetime.datetime(2019, 1, 1, 0, 0))
