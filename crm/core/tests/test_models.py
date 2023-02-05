@@ -5,7 +5,7 @@ import datetime
 
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from core.models import Customer, Contract
+from core.models import Customer, Contract, Event
 
 
 class ModelTests(TestCase):
@@ -189,3 +189,41 @@ class ModelTests(TestCase):
         self.assertEqual(contract.amount, 100.0)
         self.assertEqual(contract.payment_due,
                          datetime.datetime(2019, 1, 1, 0, 0))
+
+    def test_create_event(self):
+        """Test creating a new event."""
+        email = 'test@email.com'
+        password = 'testpass123'
+        first_name = 'first_name'
+        last_name = 'last_name'
+        role = 'sales'
+        user_sales = get_user_model().objects.create_user(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            )
+        customer = Customer.objects.create(
+                first_name='first_name',
+                last_name='last_name',
+                email='customer@example.com',
+                phone='123456789',
+                mobile='987654321',
+                company='company',
+                sales_contact=user_sales,
+                )
+        event = Event.objects.create(
+                customer=customer,
+                support_contact=user_sales,
+                event_status='open',
+                attendees=100,
+                event_date=datetime.datetime(2019, 1, 1, 0, 0),
+                notes='notes',
+                )
+        self.assertEqual(event.customer, customer)
+        self.assertEqual(event.support_contact, user_sales)
+        self.assertEqual(event.event_status, 'open')
+        self.assertEqual(event.attendees, 100)
+        self.assertEqual(event.event_date, datetime.datetime(2019, 1, 1, 0, 0))
+        self.assertEqual(event.notes, 'notes')

@@ -74,8 +74,8 @@ class Customer(models.Model):
     first_name = models.CharField(max_length=25)
     last_name = models.CharField(max_length=25)
     email = models.EmailField(unique=True, max_length=100)
-    phone = models.CharField(max_length=20)
-    mobile = models.CharField(max_length=20)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    mobile = models.CharField(max_length=20, blank=True, null=True)
     company = models.CharField(max_length=250)
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
@@ -94,3 +94,18 @@ class Contract(models.Model):
     status = models.BooleanField(default=False)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_due = models.DateField()
+
+
+class Event(models.Model):
+    """Event class to store information about events."""
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE,
+                                 null=False, blank=False)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+    support_contact = models.ForeignKey('User', on_delete=models.SET_NULL,
+                                        null=True, blank=True)
+    event_status = models.CharField(max_length=255, default='open', choices=(
+        ('open', 'open'), ('closed', 'closed')))
+    attendees = models.IntegerField()
+    event_date = models.DateField()
+    notes = models.TextField(blank=True, null=True)

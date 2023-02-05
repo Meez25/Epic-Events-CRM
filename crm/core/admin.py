@@ -47,4 +47,5 @@ class UserAdmin(BaseUserAdmin):
 
 admin.site.register(models.User, UserAdmin)
 admin.site.register(models.Customer)
-
+admin.site.register(models.Contract)
+admin.site.register(models.Event)
