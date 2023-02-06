@@ -2,7 +2,7 @@
 
 ## Endpoints
 
-### For sales user
+### For sales user
 with a filter to only see the customer who the user manage
 
 - /customer/ POST
