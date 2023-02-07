@@ -9,8 +9,8 @@ from customer import views
 
 
 router = routers.SimpleRouter()
-router.register(r"customers", views.CustomerViewSet, basename="customer")
+router.register(r"customer", views.CustomerViewSet, basename="customer")
 
 urlpatterns = [
-        path("customer/", include(router.urls)),
+        path("", include(router.urls)),
         ]

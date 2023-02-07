@@ -94,6 +94,8 @@ class Contract(models.Model):
     status = models.BooleanField(default=False)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_due = models.DateField()
+    event = models.ForeignKey('Event', on_delete=models.SET_NULL, null=True,
+                              blank=True)
 
 
 class Event(models.Model):
@@ -104,8 +106,7 @@ class Event(models.Model):
     date_updated = models.DateTimeField(auto_now=True)
     support_contact = models.ForeignKey('User', on_delete=models.SET_NULL,
                                         null=True, blank=True)
-    event_status = models.CharField(max_length=255, default='open', choices=(
-        ('open', 'open'), ('closed', 'closed')))
+    event_closed = models.BooleanField(default=False)
     attendees = models.IntegerField()
     event_date = models.DateField()
     notes = models.TextField(blank=True, null=True)

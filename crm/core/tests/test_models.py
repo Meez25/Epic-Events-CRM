@@ -216,14 +216,14 @@ class ModelTests(TestCase):
         event = Event.objects.create(
                 customer=customer,
                 support_contact=user_sales,
-                event_status='open',
+                event_closed=False,
                 attendees=100,
                 event_date=datetime.datetime(2019, 1, 1, 0, 0),
                 notes='notes',
                 )
         self.assertEqual(event.customer, customer)
         self.assertEqual(event.support_contact, user_sales)
-        self.assertEqual(event.event_status, 'open')
+        self.assertEqual(event.event_closed, False)
         self.assertEqual(event.attendees, 100)
         self.assertEqual(event.event_date, datetime.datetime(2019, 1, 1, 0, 0))
         self.assertEqual(event.notes, 'notes')
