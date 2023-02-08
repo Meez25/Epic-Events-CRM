@@ -438,3 +438,67 @@ class PrivateCustomerApiTests(TestCase):
         self.assertEqual(contract.signed, payload['signed'])
         self.assertEqual(contract.amount, payload['amount'])
         self.assertEqual(contract.payment_due, date_in_1_year)
+
+    def test_sales_user_can_modify_a_contract_with_patch(self):
+        """Test that sales user can modify a contract."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        contract = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer,
+                sales_contact=self.sales_user,
+                )
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': True,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = get_contract_url(customer.id, contract.id)
+        res = self.sales_client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        contract.refresh_from_db()
+        self.assertEqual(contract.signed, payload['signed'])
+        self.assertEqual(contract.payment_due, date_in_1_year)
+
+    def test_sales_user_can_delete_a_contract(self):
+        """Test that sales user can delete a contract."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        contract = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer,
+                sales_contact=self.sales_user,
+                )
+        url = get_contract_url(customer.id, contract.id)
+        res = self.sales_client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Contract.objects.count(), 0)
+
+    def test_sales_cannot_delete_anothers_contract(self):
+        """Test that a sales user cannot delete another's sales contract."""
+        sales_user2 = get_user_model().objects.create_user(
+                email='sales2@example.com',
+                role='sales',
+                password='testpass',
+                )
+        customer = create_customer(sales_user2, "test@example.com")
+        contract = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer,
+                sales_contact=sales_user2,
+                )
+        url = get_contract_url(customer.id, contract.id)
+        res = self.sales_client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Contract.objects.count(), 1)

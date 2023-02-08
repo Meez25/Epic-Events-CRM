@@ -45,10 +45,12 @@ class ContractSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Check validation."""
-        if data['payment_due'] < datetime.date.today():
-            raise serializers.ValidationError(
+        if 'payment_due' in data:
+            if data['payment_due'] < datetime.date.today():
+                raise serializers.ValidationError(
                     "Payment due date must be a future date.")
-        if data['amount'] < 0:
-            raise serializers.ValidationError(
+        if 'amount' in data:
+            if data['amount'] < 0:
+                raise serializers.ValidationError(
                     "Amount must be a positive number.")
         return data
