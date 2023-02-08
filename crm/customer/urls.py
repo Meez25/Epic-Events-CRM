@@ -11,6 +11,11 @@ from customer import views
 router = routers.SimpleRouter()
 router.register(r"customer", views.CustomerViewSet, basename="customer")
 
+contract_router = routers.NestedSimpleRouter(router, r"customer",
+                                             lookup="customer")
+contract_router.register(r"contract", views.ContractViewSet)
+
 urlpatterns = [
         path("", include(router.urls)),
+        path("", include(contract_router.urls)),
         ]

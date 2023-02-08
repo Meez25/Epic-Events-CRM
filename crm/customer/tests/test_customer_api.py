@@ -1,6 +1,8 @@
 """
 Test for customer api.
 """
+import datetime
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -8,7 +10,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from core.models import Customer
+from core.models import Customer, Contract
 
 CUSTOMER_URL = reverse("customer-list")
 
@@ -30,6 +32,16 @@ def create_customer(sales_user, email, **params):
             }
     defaults.update(params)
     return Customer.objects.create(sales_contact=sales_user, **defaults)
+
+
+def create_contract_url(customer_id):
+    """Return contract detail URL."""
+    return reverse("contract-list", args=[customer_id])
+
+
+def get_contract_url(customer_id, contract_id):
+    """Return contract detail URL."""
+    return reverse("contract-detail", args=[customer_id, contract_id])
 
 
 class PublicProductApiTests(TestCase):
@@ -91,8 +103,8 @@ class PrivateCustomerApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_sales_user_see_his_assigned_customers(self):
-        """Test that sales user can see his assigned customers."""
+    def test_sales_user_see_all_customers(self):
+        """Test that sales user can see all customers."""
         customer1 = create_customer(self.sales_user, "test1@example.com")
         customer2 = create_customer(self.sales_user, "test2@example.com")
         sales_user2 = get_user_model().objects.create_user(
@@ -105,10 +117,10 @@ class PrivateCustomerApiTests(TestCase):
         res = self.sales_client.get(CUSTOMER_URL)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 2)
+        self.assertEqual(len(res.data), 3)
         self.assertEqual(res.data[0]['id'], customer1.id)
         self.assertEqual(res.data[1]['id'], customer2.id)
-        self.assertNotIn(customer3.id, [c['id'] for c in res.data])
+        self.assertEqual(res.data[2]['id'], customer3.id)
 
     def test_sales_user_can_modify_his_assigned_customers_with_put(self):
         """Test that sales user can modify his assigned customers."""
@@ -129,6 +141,27 @@ class PrivateCustomerApiTests(TestCase):
         for key in payload.keys():
             assert payload[key] == getattr(customer, key)
 
+    def test_sales_user_cannot_modify_an_unassigned_customer_with_put(self):
+        """Test that sales user cannot modify an unassigned customer."""
+        sales_user2 = get_user_model().objects.create_user(
+                email='sales2@example.com',
+                role='sales',
+                password='testpass',
+                )
+        customer2 = create_customer(sales_user2, "test2@example.com")
+        payload = {
+                'first_name': 'Test Name',
+                'last_name': 'User',
+                'email': 'test2@example.com',
+                'phone': '1234567890',
+                'mobile': '1234567890',
+                'company': 'Test Company',
+                }
+        url = detail_customer_url(customer2.id)
+        res = self.sales_client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_sales_user_can_modify_his_assigned_customers_with_patch(self):
         """Test that sales user can modify his assigned customers."""
         customer = create_customer(self.sales_user, "test1@example.com")
@@ -144,16 +177,27 @@ class PrivateCustomerApiTests(TestCase):
         for key in payload.keys():
             assert payload[key] == getattr(customer, key)
 
-    def test_sales_user_can_delete_his_assigned_customers(self):
-        """Test that sales user can delete his assigned customers."""
+    def test_sales_user_cannot_modify_an_unassigned_customer_with_patch(self):
+        """Test that sales user cannot modify an unassigned customer."""
         sales_user2 = get_user_model().objects.create_user(
                 email='sales2@example.com',
                 role='sales',
                 password='testpass',
                 )
-
-        customer = create_customer(self.sales_user, "test1@example.com")
         customer2 = create_customer(sales_user2, "test2@example.com")
+        payload = {
+                'last_name': 'User',
+                'email': 'test2@example.com',
+                'company': 'Test Company',
+                }
+        url = detail_customer_url(customer2.id)
+        res = self.sales_client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_sales_user_can_delete_his_assigned_customers(self):
+        """Test that sales user can delete his assigned customers."""
+        customer = create_customer(self.sales_user, "test1@example.com")
         url = detail_customer_url(customer.id)
         res = self.sales_client.delete(url)
 
@@ -161,8 +205,236 @@ class PrivateCustomerApiTests(TestCase):
         exists = Customer.objects.filter(id=customer.id).exists()
         self.assertFalse(exists)
 
-        url2 = detail_customer_url(customer2.id)
-        res2 = self.sales_client.delete(url2)
-        self.assertEqual(res2.status_code, status.HTTP_404_NOT_FOUND)
+    def test_sales_user_cannot_delete_an_unassigned_customer(self):
+        """Test that sales user cannot delete an unassigned customer."""
+        sales_user2 = get_user_model().objects.create_user(
+                email='sales2@example.com',
+                role='sales',
+                password='testpass',
+                )
+
+        customer2 = create_customer(sales_user2, "test2@example.com")
+        url = detail_customer_url(customer2.id)
+        res = self.sales_client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         exists = Customer.objects.filter(id=customer2.id).exists()
         self.assertTrue(exists)
+
+    def test_sales_user_is_able_to_filter_customer_by_email(self):
+        """Test that sales user can filter customers by email."""
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        customer2 = create_customer(self.sales_user, "test2@example.com")
+        customer3 = create_customer(self.sales_user, "test3@example.com")
+        res = self.sales_client.get(CUSTOMER_URL,
+                                    {'email': 'test@example.com'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]['id'], customer1.id)
+        self.assertNotIn(customer2.id, [c['id'] for c in res.data])
+        self.assertNotIn(customer3.id, [c['id'] for c in res.data])
+
+    def test_sales_user_is_able_to_filter_customer_by_email_weird_cap(self):
+        """Test that sales user can filter customers by email."""
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        customer2 = create_customer(self.sales_user, "test2@example.com")
+        customer3 = create_customer(self.sales_user, "test3@example.com")
+        res = self.sales_client.get(CUSTOMER_URL,
+                                    {'email': 'TEST@example.com'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]['id'], customer1.id)
+        self.assertNotIn(customer2.id, [c['id'] for c in res.data])
+        self.assertNotIn(customer3.id, [c['id'] for c in res.data])
+
+    def test_sales_user_is_able_to_filter_customer_by_name(self):
+        """Test that sales user can filter customers by name."""
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        customer2 = create_customer(self.sales_user, "test2@example.com")
+        customer3 = create_customer(self.sales_user, "test3@example.com")
+        customer4 = Customer.objects.create(
+                first_name='Test',
+                last_name='ToFind',
+                email="test4@example.com",
+                company="Test Company",
+                sales_contact=self.sales_user,
+                )
+        res = self.sales_client.get(CUSTOMER_URL,
+                                    {'name': 'ToFind'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertNotIn(customer1.id, [c['id'] for c in res.data])
+        self.assertNotIn(customer2.id, [c['id'] for c in res.data])
+        self.assertNotIn(customer3.id, [c['id'] for c in res.data])
+        self.assertEqual(res.data[0]['id'], customer4.id)
+
+    def test_sales_user_can_create_a_contract(self):
+        """Test that sales user can create a contract."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'amount': 1000.00,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        contract = Contract.objects.get(id=res.data['id'])
+        self.assertEqual(contract.signed, payload['signed'])
+        self.assertEqual(contract.amount, payload['amount'])
+        self.assertEqual(contract.payment_due, date_in_1_year)
+        self.assertEqual(contract.customer.id, customer.id)
+        self.assertEqual(contract.sales_contact.id, self.sales_user.id)
+
+    def test_sales_user_set_date_in_past(self):
+        """Test that sales user cannot set a date in the past."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_one_year_ago = (datetime.date.today() -
+                             datetime.timedelta(days=365))
+        date_as_string_one_year_ago = date_one_year_ago.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'amount': 1000.00,
+                'payment_due': date_as_string_one_year_ago,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sales_user_creates_contract_with_no_amount(self):
+        """Test that sales user cannot create a contract with no amount."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sales_user_creates_contract_with_negative_amount(self):
+        """Test that sales user cannot create a contract with negative
+        amount."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'amount': -1000.00,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sales_user_creates_contract_with_bad_amount(self):
+        """Test that sales user cannot create a contract with bad
+        amount."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'amount': "ImBad",
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sales_user_creates_contract_with_int_amount(self):
+        """Test that sales user cannot create a contract with int
+        amount."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'amount': 1,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+    def test_support_user_cannot_create_a_contract(self):
+        """Test that support user cannot create a contract."""
+        customer = create_customer(self.support_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': False,
+                'amount': 1000.00,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = create_contract_url(customer.id)
+        res = self.support_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_sales_user_can_get_the_contract_list(self):
+        """Test that sales user can get the contract list."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer,
+                sales_contact=self.sales_user,
+                )
+        contract2 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer,
+                sales_contact=self.sales_user,
+                )
+        url = create_contract_url(customer.id)
+        res = self.sales_client.get(url)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 2)
+        self.assertEqual(res.data[0]['id'], contract1.id)
+        self.assertEqual(res.data[1]['id'], contract2.id)
+
+    def test_sales_user_can_modify_a_contract_with_put(self):
+        """Test that sales user can modify a contract."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        contract = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer,
+                sales_contact=self.sales_user,
+                )
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': True,
+                'amount': 2000.00,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = get_contract_url(customer.id, contract.id)
+        res = self.sales_client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        contract.refresh_from_db()
+        self.assertEqual(contract.signed, payload['signed'])
+        self.assertEqual(contract.amount, payload['amount'])
+        self.assertEqual(contract.payment_due, date_in_1_year)

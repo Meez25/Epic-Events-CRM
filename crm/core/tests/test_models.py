@@ -179,16 +179,16 @@ class ModelTests(TestCase):
         contract = Contract.objects.create(
                 sales_contact=user_sales,
                 customer=customer,
-                status=True,
+                signed=True,
                 amount=100.0,
-                payment_due=datetime.datetime(2019, 1, 1, 0, 0),
+                payment_due=datetime.date(2019, 1, 1),
                 )
         self.assertEqual(contract.sales_contact, user_sales)
         self.assertEqual(contract.customer, customer)
-        self.assertEqual(contract.status, True)
+        self.assertEqual(contract.signed, True)
         self.assertEqual(contract.amount, 100.0)
         self.assertEqual(contract.payment_due,
-                         datetime.datetime(2019, 1, 1, 0, 0))
+                         datetime.date(2019, 1, 1))
 
     def test_create_event(self):
         """Test creating a new event."""
