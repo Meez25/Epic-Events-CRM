@@ -19,10 +19,10 @@ with a filter to only see the customer who the user manage
 - /customer/pk/contract/pk/ PUT
 - /customer/pk/contract/pk/ PATCH
 
-- /customer/pk/contract/?name=example GET
-- /customer/pk/contract/?mail=example@example.com GET
-- /customer/pk/contract/?date=01-01-2023 GET
-- /customer/pk/contract/?amount=550 GET
+- /contract/?name=example GET
+- /contract/?mail=example@example.com GET
+- /contract/?date=01-01-2023 GET
+- /contract/?amount=550 GET
 
 - /customer/pk/contract/pk/event/ GET
 - /customer/pk/contract/pk/event/ POST
@@ -30,7 +30,7 @@ with a filter to only see the customer who the user manage
 
 - /customer/pk/contract/pk/event/?name=example GET
 - /customer/pk/contract/pk/event/?mail=example@example.com GET
-- /customer/pk/contract/pk/event/?eventdate=28-02-2023 GET
+- /customer/pk/contract/pk/event/?eventdate=2023-02-28 GET
 
 
 ### For support 
