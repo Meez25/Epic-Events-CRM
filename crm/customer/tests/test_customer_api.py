@@ -12,7 +12,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from core.models import Customer, Contract
+from core.models import Customer, Contract, Event
 
 CUSTOMER_URL = reverse("customer-list")
 
@@ -666,3 +666,26 @@ class PrivateCustomerApiTests(TestCase):
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['id'], contract2.id)
         self.assertNotIn(contract1.id, res.data)
+
+    def test_sales_user_set_a_contract_on_signed_true_which_add_event(self):
+        """Test that a sales user can set a contract on signed true which
+        add an event."""
+        customer = create_customer(self.sales_user, "test@example.com")
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        payload = {
+                'signed': True,
+                'amount': 1000.00,
+                'payment_due': date_as_string_in_1_year,
+                'support_contact': self.support_user.id,
+                }
+        url = create_contract_url(customer.id)
+        res = self.sales_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        contract = Contract.objects.get(id=res.data['id'])
+        self.assertTrue(contract.signed)
+        self.assertTrue(len(Event.objects.all()), 1)
+        event = contract.event
+        self.assertEqual(event.customer, customer)
+        self.assertEqual(event.support_contact, self.support_user)

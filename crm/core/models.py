@@ -107,6 +107,6 @@ class Event(models.Model):
     support_contact = models.ForeignKey('User', on_delete=models.SET_NULL,
                                         null=True, blank=True)
     event_closed = models.BooleanField(default=False)
-    attendees = models.IntegerField()
-    event_date = models.DateField()
+    attendees = models.IntegerField(null=True, blank=True)
+    event_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)

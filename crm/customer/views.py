@@ -88,9 +88,11 @@ class ContractViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Create a contract."""
         customer = Customer.objects.get(id=self.kwargs['customer_pk'])
+        support_contact = request.data.get('support_contact', None)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(sales_contact=request.user, customer=customer)
+        serializer.save(sales_contact=request.user, customer=customer,
+                        support_contact=support_contact)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED,
                         headers=headers)
