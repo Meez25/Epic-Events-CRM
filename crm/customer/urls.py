@@ -10,6 +10,7 @@ from customer import views
 
 router = routers.SimpleRouter()
 router.register(r"customer", views.CustomerViewSet, basename="customer")
+router.register(r"contract", views.ContractViewSet, basename="search-contract")
 
 contract_router = routers.NestedSimpleRouter(router, r"customer",
                                              lookup="customer")

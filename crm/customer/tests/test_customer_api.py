@@ -2,7 +2,9 @@
 Test for customer api.
 """
 import datetime
+import unittest.mock
 
+from django.utils.timezone import make_aware
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -502,3 +504,165 @@ class PrivateCustomerApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Contract.objects.count(), 1)
+
+    def test_sales_user_can_search_contract_with_customer_name(self):
+        """Test that a sales user can search contracts from a customer name"""
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        customer2 = Customer.objects.create(
+                first_name="Test2",
+                last_name="test",
+                company="test company",
+                email="test2@example.com",
+                sales_contact=self.sales_user,
+                )
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        contract2 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        contract3 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer2,
+                sales_contact=self.sales_user,
+                )
+        url = reverse('search-contract-list')
+        res = self.sales_client.get(url, {'last_name': customer1.last_name})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 2)
+        self.assertEqual(res.data[0]['id'], contract1.id)
+        self.assertEqual(res.data[1]['id'], contract2.id)
+        self.assertNotIn(contract3.id, res.data)
+
+    def test_sales_user_can_search_contract_with_customer_email(self):
+        """Test that a sales user can search contracts from a customer
+        email."""
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        customer2 = Customer.objects.create(
+                first_name="Test2",
+                last_name="test",
+                company="test company",
+                email="test2@example.com",
+                sales_contact=self.sales_user,
+                )
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        contract2 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        contract3 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=(datetime.date.today() +
+                             datetime.timedelta(days=365)),
+                customer=customer2,
+                sales_contact=self.sales_user,
+                )
+        url = reverse('search-contract-list')
+        res = self.sales_client.get(url, {'email': customer1.email})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 2)
+        self.assertEqual(res.data[0]['id'], contract1.id)
+        self.assertEqual(res.data[1]['id'], contract2.id)
+        self.assertNotIn(contract3.id, res.data)
+
+    def test_sales_user_can_search_contract_with_contract_date(self):
+        """Test that a sales user can search contracts from a contract date."""
+        testtime = make_aware((datetime.datetime.now()
+                               - datetime.timedelta(days=1)))
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        customer2 = Customer.objects.create(
+                first_name="Test2",
+                last_name="test",
+                company="test company",
+                email="test2@example.com",
+                sales_contact=self.sales_user,
+                )
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        with unittest.mock.patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = testtime
+            contract2 = Contract.objects.create(
+                    signed=False,
+                    amount=1000.00,
+                    payment_due=(datetime.date.today() +
+                                 datetime.timedelta(days=364)),
+                    customer=customer1,
+                    sales_contact=self.sales_user,
+                    )
+            contract3 = Contract.objects.create(
+                    signed=False,
+                    amount=1000.00,
+                    payment_due=(datetime.date.today() +
+                                 datetime.timedelta(days=365)),
+                    customer=customer2,
+                    sales_contact=self.sales_user,
+                    )
+
+        url = reverse('search-contract-list')
+        today_date = datetime.date.today()
+        today_date_as_string = today_date.strftime('%Y-%m-%d')
+        res = self.sales_client.get(url, {'date': today_date_as_string})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]['id'], contract1.id)
+        self.assertNotIn(contract2.id, res.data)
+        self.assertNotIn(contract3.id, res.data)
+
+    def test_sales_user_can_search_a_contract_with_amount(self):
+        """Test that a sales user can search a contract with amount."""
+
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        contract2 = Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        url = reverse('search-contract-list')
+        res = self.sales_client.get(url, {'amount': 1000.00})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0]['id'], contract2.id)
+        self.assertNotIn(contract1.id, res.data)

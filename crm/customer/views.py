@@ -1,6 +1,7 @@
 """
 Views for the customer APIs.
 """
+import datetime
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import (
@@ -58,11 +59,29 @@ class ContractViewSet(viewsets.ModelViewSet):
         """Return a list of contracts."""
         email = request.query_params.get('email', None)
         if email is not None:
-            self.queryset = self.queryset.filter(email__iexact=email)
-        name = request.query_params.get('name', None)
-        if name is not None:
+            self.queryset = self.queryset.filter(customer__email__iexact=email)
+        last_name = request.query_params.get('last_name', None)
+        if last_name is not None:
             self.queryset = self.queryset.filter(
-                    last_name__icontains=name
+                    customer__last_name__icontains=last_name
+                    )
+        date = request.query_params.get('date', None)
+        if date is not None:
+            date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
+            self.queryset = self.queryset.filter(
+                    date_created__date=date_obj
+                    )
+        amount = request.query_params.get('amount', None)
+        if amount is not None:
+            try:
+                amount = float(amount)
+            except ValueError:
+                return Response(
+                        {'error': 'Invalid amount'},
+                        status=status.HTTP_400_BAD_REQUEST
+                        )
+            self.queryset = self.queryset.filter(
+                    amount__range=(amount-100, amount+100)
                     )
         return super().list(request, *args, **kwargs)
 
