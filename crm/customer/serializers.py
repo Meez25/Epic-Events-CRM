@@ -71,3 +71,45 @@ class ContractSerializer(serializers.ModelSerializer):
             validated_data['event'] = event
         validated_data.pop('support_contact')
         return Contract.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        """Update a contract."""
+        if 'support_contact' in validated_data:
+            support_contact = User.objects.get(
+                id=validated_data['support_contact'])
+            if support_contact is None:
+                raise serializers.ValidationError(
+                    "Support contact must be a valid user.")
+            if instance.event is None:
+                event = Event.objects.create(
+                    support_contact=support_contact,
+                    customer=instance.customer,
+                    )
+                instance.event = event
+            else:
+                instance.event.support_contact = support_contact
+                instance.event.save()
+            validated_data.pop('support_contact')
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        return instance
+
+
+class EventSerializer(serializers.ModelSerializer):
+    """Serializer for event objects."""
+
+    class Meta:
+        model = Event
+        fields = (
+                'id',
+                'support_contact',
+                'customer',
+                'date_created',
+                'date_updated',
+                'event_closed',
+                'attendees',
+                'event_date',
+                'notes',
+                )
+        read_only_fields = ('id', 'date_created', 'date_updated')

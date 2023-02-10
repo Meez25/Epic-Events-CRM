@@ -37,13 +37,18 @@ def create_customer(sales_user, email, **params):
 
 
 def create_contract_url(customer_id):
-    """Return contract detail URL."""
+    """Return contract list URL."""
     return reverse("contract-list", args=[customer_id])
 
 
 def get_contract_url(customer_id, contract_id):
     """Return contract detail URL."""
     return reverse("contract-detail", args=[customer_id, contract_id])
+
+
+def get_event_url(customer_id, contract_id, event_id):
+    """Return event detail URL."""
+    return reverse("event-detail", args=[customer_id, contract_id, event_id])
 
 
 class PublicProductApiTests(TestCase):
@@ -431,6 +436,7 @@ class PrivateCustomerApiTests(TestCase):
                 'signed': True,
                 'amount': 2000.00,
                 'payment_due': date_as_string_in_1_year,
+                'support_contact': self.support_user.id,
                 }
         url = get_contract_url(customer.id, contract.id)
         res = self.sales_client.put(url, payload)
@@ -457,6 +463,7 @@ class PrivateCustomerApiTests(TestCase):
         payload = {
                 'signed': True,
                 'payment_due': date_as_string_in_1_year,
+                'support_contact': self.support_user.id,
                 }
         url = get_contract_url(customer.id, contract.id)
         res = self.sales_client.patch(url, payload)
@@ -689,3 +696,316 @@ class PrivateCustomerApiTests(TestCase):
         event = contract.event
         self.assertEqual(event.customer, customer)
         self.assertEqual(event.support_contact, self.support_user)
+
+    def test_sales_user_signs_existing_contract_creates_event_patch(self):
+        """Test that creates a new event when an existing contract is signed.
+        """
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        payload = {
+                'signed': True,
+                'support_contact': self.support_user.id,
+                }
+        url = get_contract_url(customer1.id, contract1.id)
+        res = self.sales_client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        contract = Contract.objects.get(id=res.data['id'])
+        self.assertTrue(contract.signed)
+        self.assertTrue(len(Event.objects.all()), 1)
+        event = contract.event
+        self.assertEqual(event.customer, customer1)
+        self.assertEqual(event.support_contact, self.support_user)
+
+    def test_sales_user_signs_existing_contract_creates_event_put(self):
+        """Test that creates a new event when an existing contract is signed.
+        """
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        contract1 = Contract.objects.create(
+                signed=False,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        payload = {
+                'signed': True,
+                'support_contact': self.support_user.id,
+                'amount': 1000.00,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = get_contract_url(customer1.id, contract1.id)
+        res = self.sales_client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        contract = Contract.objects.get(id=res.data['id'])
+        self.assertTrue(contract.signed)
+        self.assertTrue(len(Event.objects.all()), 1)
+        event = contract.event
+        self.assertEqual(event.customer, customer1)
+        self.assertEqual(event.support_contact, self.support_user)
+
+    def test_a_signed_contract_cannot_be_unsigned(self):
+        """Test that a signed contract cannot be unsigned."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        payload = {
+                'signed': False,
+                'support_contact': self.support_user.id,
+                'amount': 3000.00,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = get_contract_url(customer1.id, contract1.id)
+        res = self.sales_client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        contract1.refresh_from_db()
+        self.assertTrue(contract1.signed)
+
+    def test_a_signed_contract_cannot_be_unsigned_patch(self):
+        """Test that a signed contract cannot be unsigned."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        payload = {
+                'signed': False,
+                'support_contact': self.support_user.id,
+                'payment_due': date_as_string_in_1_year,
+                }
+        url = get_contract_url(customer1.id, contract1.id)
+        res = self.sales_client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        contract1.refresh_from_db()
+        self.assertTrue(contract1.signed)
+
+    def test_sales_user_cannot_modify_event(self):
+        """Test that a sales user is not able to modify an event."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract1.event = event
+        contract1.save()
+        payload = {
+                'attendees': 10,
+                }
+        url = get_event_url(customer1.id, contract1.id, event.id)
+        res = self.sales_client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Event.objects.get(id=event.id).attendees, None)
+
+    def test_support_user_see_all_events(self):
+        """Test that a support user can see all events."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract1.event = event
+        contract1.save()
+        contract2 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event2 = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract2.event = event2
+        contract2.save()
+        url = reverse("search-event-list")
+        res = self.support_client.get(url)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_support_user_can_modify_an_event_with_patch(self):
+        """Test that a support user can modify an event."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract1.event = event
+        contract1.save()
+        payload = {
+                'attendees': 10,
+                }
+        url = get_event_url(customer1.id, contract1.id, event.id)
+        res = self.support_client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(Event.objects.get(id=event.id).attendees, 10)
+
+    def test_support_user_can_modify_an_event_with_put(self):
+        """Test that a support user can modify an event."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract1.event = event
+        contract1.save()
+        payload = {
+                'attendees': 10,
+                'customer': customer1.id,
+                'support_contact': self.support_user.id,
+                'notes': 'I am a note',
+                }
+        url = get_event_url(customer1.id, contract1.id, event.id)
+        res = self.support_client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(Event.objects.get(id=event.id).attendees, 10)
+
+    def test_sales_user_see_all_events(self):
+        """Test that a support user can see all events."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract1.event = event
+        contract1.save()
+        contract2 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event2 = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                )
+        contract2.event = event2
+        contract2.save()
+        url = reverse("search-event-list")
+        res = self.sales_client.get(url)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+    def test_support_user_cannot_modify_an_event_with_put_not_assigned(self):
+        """Test that a support user can modify an event."""
+        support_user2 = get_user_model().objects.create_user(
+                email='support2@example.com',
+                role='support',
+                password='testpass',
+                )
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=support_user2,
+                )
+        contract1.event = event
+        contract1.save()
+        payload = {
+                'attendees': 10,
+                'customer': customer1.id,
+                'support_contact': self.support_user.id,
+                'notes': 'I am a note',
+                }
+        url = get_event_url(customer1.id, contract1.id, event.id)
+        res = self.support_client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_support_user_get_event_detail(self):
+        """Test support user get detail."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                attendees=10,
+                )
+        contract1.event = event
+        contract1.save()
+        url = get_event_url(customer1.id, contract1.id, event.id)
+        res = self.support_client.get(url)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['attendees'], event.attendees)

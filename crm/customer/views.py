@@ -14,7 +14,7 @@ from rest_framework.authentication import (
         )
 
 
-from core.models import Customer, Contract
+from core.models import Customer, Contract, Event
 
 from customer import serializers
 from customer import permissions
@@ -96,3 +96,86 @@ class ContractViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED,
                         headers=headers)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Update a contract."""
+        contract = self.get_object()
+        signed = request.data.get('signed', None)
+        support_contact = request.data.get('support_contact', None)
+        if signed and contract.signed is False and support_contact is not None:
+            serializer = self.get_serializer(contract, data=request.data,
+                                             partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(support_contact=support_contact)
+        elif not signed:
+            serializer = self.get_serializer(contract, data=request.data,
+                                             partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        else:
+            return Response(
+                    {'error': 'To sign a contract, you must provide a support contact.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """Update a contract."""
+        contract = self.get_object()
+        signed = request.data.get('signed', None)
+        if signed.lower() == 'false':
+            signed = False
+        elif signed.lower() == 'true':
+            signed = True
+        else:
+            return Response(
+                    {'error': 'Invalid signed value'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        support_contact = request.data.get('support_contact', None)
+        if signed and contract.signed is False and support_contact is not None:
+            serializer = self.get_serializer(contract, data=request.data,
+                                             )
+            serializer.is_valid(raise_exception=True)
+            serializer.save(support_contact=support_contact)
+        elif not signed and contract.signed:
+            return Response(
+                    {'error': 'You cannot unsign a contract.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        elif not signed:
+            serializer = self.get_serializer(contract, data=request.data,
+                                             )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        else:
+            return Response(
+                    {'error': 'To sign a contract, you must provide a support contact.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        return Response(serializer.data)
+
+
+class EventViewSet(viewsets.ModelViewSet):
+    """Manage events in the database."""
+
+    serializer_class = serializers.EventSerializer
+    permission_classes = (IsAuthenticated,
+                          permissions.IsSupportOwnerOrReadOnly,
+                          )
+    authentication_classes = (TokenAuthentication, SessionAuthentication)
+    queryset = Event.objects.all()
+
+    def partial_update(self, request, *args, **kwargs):
+        """Update an event."""
+        event = self.get_object()
+        if event.event_closed:
+            return Response(
+                    {'error': 'You cannot update a completed event.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        serializer = self.get_serializer(event, data=request.data,
+                                         partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
