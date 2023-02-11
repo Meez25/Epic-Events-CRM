@@ -107,6 +107,11 @@ class ContractViewSet(viewsets.ModelViewSet):
                                              partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save(support_contact=support_contact)
+        elif not signed and contract.signed:
+            return Response(
+                    {'error': 'You cannot unsign a contract.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
         elif not signed:
             serializer = self.get_serializer(contract, data=request.data,
                                              partial=True)
@@ -123,13 +128,9 @@ class ContractViewSet(viewsets.ModelViewSet):
         """Update a contract."""
         contract = self.get_object()
         signed = request.data.get('signed', None)
-        if signed.lower() == 'false':
-            signed = False
-        elif signed.lower() == 'true':
-            signed = True
-        else:
+        if type(signed) is not bool:
             return Response(
-                    {'error': 'Invalid signed value'},
+                    {'error': 'Invalid signed value.'},
                     status=status.HTTP_400_BAD_REQUEST
                     )
         support_contact = request.data.get('support_contact', None)
@@ -165,6 +166,30 @@ class EventViewSet(viewsets.ModelViewSet):
                           )
     authentication_classes = (TokenAuthentication, SessionAuthentication)
     queryset = Event.objects.all()
+
+    def get_queryset(self):
+        return self.queryset.all()
+
+    def list(self, request, *args, **kwargs):
+        """Return a list of events."""
+        email = request.query_params.get('email', None)
+        if email is not None:
+            self.queryset = self.queryset.filter(
+                    contract__customer__email__iexact=email
+                    )
+        last_name = request.query_params.get('last_name', None)
+        if last_name is not None:
+            self.queryset = self.queryset.filter(
+                    contract__customer__last_name__icontains=last_name
+                    )
+        date = request.query_params.get('date', None)
+        if date is not None:
+            date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
+            self.queryset = self.queryset.filter(
+                    date_created__date=date_obj
+                    )
+
+        return super().list(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         """Update an event."""

@@ -20,7 +20,7 @@ contract_router.register(r"contract", views.ContractViewSet)
 
 event_router = routers.NestedSimpleRouter(contract_router, r"contract",
                                           lookup="contract")
-event_router.register(r"event", views.EventViewSet, basename="event")
+event_router.register(r"event", views.EventViewSet)
 
 urlpatterns = [
         path("", include(router.urls)),
