@@ -99,6 +99,9 @@ REST_FRAMEWORK = {
         "rest_framework.pagination.LimitOffsetPagination",
         "PAGE_SIZE": 10,
         "TEST_REQUEST_DEFAULT_FORMAT": "json",
+        "TEST_REQUEST_RENDERER_CLASSES": [
+            "rest_framework.renderers.JSONRenderer",
+            ],
         }
 
 # Password validation

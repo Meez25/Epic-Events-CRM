@@ -41,6 +41,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
             self.queryset = self.queryset.filter(
                     last_name__icontains=name
                     )
+        if request.user.role == 'support':
+            self.queryset = self.queryset.filter(
+                    event__support_contact=request.user)
         return super().list(request, *args, **kwargs)
 
 
@@ -186,7 +189,7 @@ class EventViewSet(viewsets.ModelViewSet):
         if date is not None:
             date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
             self.queryset = self.queryset.filter(
-                    date_created__date=date_obj
+                    event_date__date=date_obj
                     )
 
         return super().list(request, *args, **kwargs)

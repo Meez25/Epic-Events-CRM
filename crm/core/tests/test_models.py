@@ -7,6 +7,8 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from core.models import Customer, Contract, Event
 
+from django.utils.timezone import make_aware
+
 
 class ModelTests(TestCase):
     """Test for models."""
@@ -218,12 +220,13 @@ class ModelTests(TestCase):
                 support_contact=user_sales,
                 event_closed=False,
                 attendees=100,
-                event_date=datetime.datetime(2019, 1, 1, 0, 0),
+                event_date=make_aware(datetime.datetime(2019, 1, 1, 0, 0)),
                 notes='notes',
                 )
         self.assertEqual(event.customer, customer)
         self.assertEqual(event.support_contact, user_sales)
         self.assertEqual(event.event_closed, False)
         self.assertEqual(event.attendees, 100)
-        self.assertEqual(event.event_date, datetime.datetime(2019, 1, 1, 0, 0))
+        self.assertEqual(event.event_date, make_aware(
+            datetime.datetime(2019, 1, 1, 0, 0)))
         self.assertEqual(event.notes, 'notes')

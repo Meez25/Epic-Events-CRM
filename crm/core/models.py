@@ -108,5 +108,5 @@ class Event(models.Model):
                                         null=True, blank=True)
     event_closed = models.BooleanField(default=False)
     attendees = models.IntegerField(null=True, blank=True)
-    event_date = models.DateField(null=True, blank=True)
+    event_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
