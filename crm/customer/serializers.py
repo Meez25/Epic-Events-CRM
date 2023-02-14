@@ -4,14 +4,24 @@ Serializers for the customer APIs.
 import datetime
 import logging
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 
 from core.models import Customer, Contract, User, Event
 
 logger = logging.getLogger('django')
 
 
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for the user object."""
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'email', 'first_name', 'last_name', 'role')
+        read_only_fields = ('id',)
+
+
 class CustomerSerializer(serializers.ModelSerializer):
     """Serializer for customer objects."""
+    sales_contact = UserSerializer(read_only=True)
 
     class Meta:
         model = Customer
@@ -27,7 +37,13 @@ class CustomerSerializer(serializers.ModelSerializer):
                 'date_updated',
                 'sales_contact',
                 )
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'date_created', 'date_updated',)
+
+    def create(self, validated_data):
+        """Create a new customer."""
+        user = self.context['request'].user
+        validated_data['sales_contact'] = user
+        return Customer.objects.create(**validated_data)
 
 
 class ContractSerializer(serializers.ModelSerializer):

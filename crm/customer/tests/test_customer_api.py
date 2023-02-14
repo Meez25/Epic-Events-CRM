@@ -96,6 +96,8 @@ class PrivateCustomerApiTests(TestCase):
         res = self.sales_client.post(CUSTOMER_URL, payload)
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['sales_contact'].get('id'),
+                         self.sales_user.id)
         customer = Customer.objects.get(id=res.data['id'])
         for key in payload.keys():
             assert payload[key] == getattr(customer, key)

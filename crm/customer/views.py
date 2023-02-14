@@ -103,7 +103,22 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """Create a contract."""
-        customer = Customer.objects.get(id=self.kwargs['customer_pk'])
+        try:
+            customer_pk = self.kwargs['customer_pk']
+        except KeyError:
+            logger.error('Customer ID not provided.')
+            return Response(
+                    {'error': 'Customer ID not provided.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        try:
+            customer = Customer.objects.get(id=customer_pk)
+        except Customer.DoesNotExist:
+            logger.error('Customer does not exist.')
+            return Response(
+                    {'error': 'Customer does not exist.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
         support_contact = request.data.get('support_contact', None)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -115,7 +130,14 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         """Update a contract."""
-        contract = self.get_object()
+        try:
+            contract = self.get_object()
+        except Contract.DoesNotExist:
+            logger.error('Contract does not exist.')
+            return Response(
+                    {'error': 'Contract does not exist.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
         signed = request.data.get('signed', None)
         support_contact = request.data.get('support_contact', None)
         if signed and contract.signed is False and support_contact is not None:
@@ -143,8 +165,19 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         """Update a contract."""
-        contract = self.get_object()
+        try:
+            contract = self.get_object()
+        except Contract.DoesNotExist:
+            logger.error('Contract does not exist.')
+            return Response(
+                    {'error': 'Contract does not exist.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
         signed = request.data.get('signed', None)
+        if signed.lower() == 'true':
+            signed = True
+        elif signed.lower() == 'false':
+            signed = False
         if type(signed) is not bool:
             logger.error('Signed must be a boolean.')
             return Response(
