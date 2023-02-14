@@ -650,6 +650,49 @@ class PrivateCustomerApiTests(TestCase):
         self.assertNotIn(contract2.id, res.data['results'])
         self.assertNotIn(contract3.id, res.data['results'])
 
+    def test_sales_user_can_search_contract_with_contract_bad_date(self):
+        """Test that a sales user can search contracts from a contract date."""
+        testtime = make_aware((datetime.datetime.now()
+                               - datetime.timedelta(days=1)))
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        customer2 = Customer.objects.create(
+                first_name="Test2",
+                last_name="test",
+                company="test company",
+                email="test2@example.com",
+                sales_contact=self.sales_user,
+                )
+        Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        with unittest.mock.patch('django.utils.timezone.now') as mock_now:
+            mock_now.return_value = testtime
+            Contract.objects.create(
+                    signed=False,
+                    amount=1000.00,
+                    payment_due=(datetime.date.today() +
+                                 datetime.timedelta(days=364)),
+                    customer=customer1,
+                    sales_contact=self.sales_user,
+                    )
+            Contract.objects.create(
+                    signed=False,
+                    amount=1000.00,
+                    payment_due=(datetime.date.today() +
+                                 datetime.timedelta(days=365)),
+                    customer=customer2,
+                    sales_contact=self.sales_user,
+                    )
+
+        url = reverse('search-contract-list')
+        res = self.sales_client.get(url, {'date': 'wrongdate'})
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_sales_user_can_search_a_contract_with_amount(self):
         """Test that a sales user can search a contract with amount."""
 
@@ -675,6 +718,60 @@ class PrivateCustomerApiTests(TestCase):
         self.assertEqual(len(res.data['results']), 1)
         self.assertEqual(res.data['results'][0]['id'], contract2.id)
         self.assertNotIn(contract1.id, res.data['results'])
+
+    def test_sales_user_can_search_a_contract_with_bad_amount(self):
+        """Test that a sales user can search a contract with amount."""
+
+        customer1 = create_customer(self.sales_user, "test1@example.com")
+        Contract.objects.create(
+                signed=False,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        Contract.objects.create(
+                signed=False,
+                amount=1000.00,
+                payment_due=datetime.date.today(),
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        url = reverse('search-contract-list')
+        res = self.sales_client.get(url, {'amount': 'salut'})
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_support_user_can_see_the_contracts_of_event_he_manages(self):
+        """Test that support users can see the contracts of the
+        events he manages."""
+        customer = create_customer(self.sales_user, 'test@example.com')
+        Contract.objects.create(
+                signed=False,
+                amount=2000.00,
+                payment_due=datetime.date.today(),
+                customer=customer,
+                sales_contact=self.sales_user,
+                )
+        event = Event.objects.create(
+                customer=customer,
+                support_contact=self.support_user,
+                )
+        contract = Contract.objects.create(
+                signed=True,
+                amount=1000.00,
+                payment_due=datetime.date.today(),
+                customer=customer,
+                sales_contact=self.sales_user,
+                event=event,
+                )
+        url = reverse('search-contract-list')
+        res = self.support_client.get(url)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        print(res.data)
+        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(res.data["results"][0].get('id'), contract.id)
 
     def test_sales_user_set_a_contract_on_signed_true_which_add_event(self):
         """Test that a sales user can set a contract on signed true which
@@ -1217,6 +1314,6 @@ class PrivateCustomerApiTests(TestCase):
         contract3.event = event3
         contract3.save()
 
-        res = self.support_client.get(CUSTOMER_URL)
+        res = self.support_client.get(CUSTOMER_URL, format='json')
 
         self.assertEqual(len(res.data['results']), 1)

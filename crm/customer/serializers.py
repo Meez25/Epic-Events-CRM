@@ -2,9 +2,12 @@
 Serializers for the customer APIs.
 """
 import datetime
+import logging
 from rest_framework import serializers
 
 from core.models import Customer, Contract, User, Event
+
+logger = logging.getLogger('django')
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -20,6 +23,9 @@ class CustomerSerializer(serializers.ModelSerializer):
                 'phone',
                 'mobile',
                 'company',
+                'date_created',
+                'date_updated',
+                'sales_contact',
                 )
         read_only_fields = ('id',)
 
@@ -39,7 +45,7 @@ class ContractSerializer(serializers.ModelSerializer):
                 'signed',
                 'amount',
                 'payment_due',
-                'event'
+                'event',
                 )
         read_only_fields = ('id', 'date_created', 'date_updated')
 
@@ -47,10 +53,12 @@ class ContractSerializer(serializers.ModelSerializer):
         """Check validation."""
         if 'payment_due' in data:
             if data['payment_due'] < datetime.date.today():
+                logger.error("Payment due date is in the past.")
                 raise serializers.ValidationError(
                     "Payment due date must be a future date.")
         if 'amount' in data:
             if data['amount'] < 0:
+                logger.error("Amount is negative.")
                 raise serializers.ValidationError(
                     "Amount must be a positive number.")
         return data
@@ -62,6 +70,7 @@ class ContractSerializer(serializers.ModelSerializer):
             support_contact = User.objects.get(
                 id=validated_data['support_contact'])
             if support_contact is None:
+                logger.error("Support contact must be a valid user.")
                 raise serializers.ValidationError(
                     "Support contact must be a valid user.")
             event = Event.objects.create(
@@ -78,6 +87,7 @@ class ContractSerializer(serializers.ModelSerializer):
             support_contact = User.objects.get(
                 id=validated_data['support_contact'])
             if support_contact is None:
+                logger.error("Support contact must be a valid user.")
                 raise serializers.ValidationError(
                     "Support contact must be a valid user.")
             if instance.event is None:
@@ -112,4 +122,4 @@ class EventSerializer(serializers.ModelSerializer):
                 'event_date',
                 'notes',
                 )
-        read_only_fields = ('id', 'date_created', 'date_updated')
+        read_only_fields = ('id', 'date_created', 'date_updated',)

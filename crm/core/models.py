@@ -1,12 +1,17 @@
 """
 Database models.
 """
+import logging
+
 from django.db import models
 from django.contrib.auth.models import (
         AbstractBaseUser,
         BaseUserManager,
         PermissionsMixin,
         )
+
+
+logger = logging.getLogger('django')
 
 
 class UserManager(BaseUserManager):
@@ -16,6 +21,7 @@ class UserManager(BaseUserManager):
                     last_name=None, **extra_fields):
         """Create a new user profile."""
         if not email:
+            logger.error("User must have an email address.")
             raise ValueError('Users must have an email address')
         user = self.model(email=self.normalize_email(email),
                           first_name=first_name,
@@ -94,8 +100,8 @@ class Contract(models.Model):
     signed = models.BooleanField(default=False)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_due = models.DateField()
-    event = models.ForeignKey('Event', on_delete=models.SET_NULL, null=True,
-                              blank=True)
+    event = models.OneToOneField('Event', on_delete=models.CASCADE,
+                                 null=True, blank=True)
 
 
 class Event(models.Model):

@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-
+import datetime
 from pathlib import Path
 import environ
 
@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "core",
-    "crm"
+    "crm",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -93,7 +94,7 @@ DATABASES = {
 
 REST_FRAMEWORK = {
         'DEFAULT_AUTHENTICATION_CLASSES': (
-            'rest_framework_simplejwt.authentication.JWTAuthentication'
+            'rest_framework_simplejwt.authentication.JWTAuthentication',
         ),
         "DEFAULT_PAGINATION_CLASS":
         "rest_framework.pagination.LimitOffsetPagination",
@@ -102,6 +103,7 @@ REST_FRAMEWORK = {
         "TEST_REQUEST_RENDERER_CLASSES": [
             "rest_framework.renderers.JSONRenderer",
             ],
+        "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
         }
 
 # Password validation
@@ -121,6 +123,35 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+                'style': "{",
+                },
+            },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'verbose',
+                },
+            'file': {
+                'class': 'logging.FileHandler',
+                'filename': 'log/debug.log',
+                'formatter': 'verbose',
+                }
+            },
+        'loggers': {
+            'django': {
+                'handlers': ['console', 'file'],
+                'level': 'ERROR',
+                'propagate': True,
+                },
+            },
+        }
 
 
 # Internationalization
@@ -146,3 +177,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "core.User"
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),
+    }

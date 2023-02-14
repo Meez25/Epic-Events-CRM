@@ -2,6 +2,7 @@
 Views for the customer APIs.
 """
 import datetime
+import logging
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import (
@@ -19,13 +20,14 @@ from core.models import Customer, Contract, Event
 from customer import serializers
 from customer import permissions
 
+logger = logging.getLogger('django')
+
 
 class CustomerViewSet(viewsets.ModelViewSet):
     """Manage customers in the database."""
     serializer_class = serializers.CustomerSerializer
     permission_classes = (IsAuthenticated, permissions.IsSalesOwnerOrReadOnly,
                           )
-    authentication_classes = (TokenAuthentication, SessionAuthentication)
     queryset = Customer.objects.all()
 
     def get_queryset(self):
@@ -50,9 +52,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class ContractViewSet(viewsets.ModelViewSet):
     """Manage contracts in the database."""
     serializer_class = serializers.ContractSerializer
-    permission_classes = (IsAuthenticated, permissions.IsSalesOwnerOrReadOnly,
+    permission_classes = (IsAuthenticated,
+                          permissions.IsSalesOwnerOrReadOnly,
                           )
-    authentication_classes = (TokenAuthentication, SessionAuthentication)
     queryset = Contract.objects.all()
 
     def get_queryset(self):
@@ -70,15 +72,23 @@ class ContractViewSet(viewsets.ModelViewSet):
                     )
         date = request.query_params.get('date', None)
         if date is not None:
-            date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
-            self.queryset = self.queryset.filter(
-                    date_created__date=date_obj
-                    )
+            try:
+                date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
+                self.queryset = self.queryset.filter(
+                        date_created__date=date_obj
+                        )
+            except ValueError:
+                logger.error('Invalid date format.')
+                return Response(
+                        {'error': 'Invalid date format.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                        )
         amount = request.query_params.get('amount', None)
         if amount is not None:
             try:
                 amount = float(amount)
             except ValueError:
+                logger.error('Amount must be a float.')
                 return Response(
                         {'error': 'Invalid amount'},
                         status=status.HTTP_400_BAD_REQUEST
@@ -86,6 +96,9 @@ class ContractViewSet(viewsets.ModelViewSet):
             self.queryset = self.queryset.filter(
                     amount__range=(amount-100, amount+100)
                     )
+        if request.user.role == 'support':
+            self.queryset = self.queryset.filter(
+                    event__support_contact=request.user)
         return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
@@ -121,6 +134,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
         else:
+            logger.error('To sign a contract, you must provide a support contact')
             return Response(
                     {'error': 'To sign a contract, you must provide a support contact.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -132,8 +146,9 @@ class ContractViewSet(viewsets.ModelViewSet):
         contract = self.get_object()
         signed = request.data.get('signed', None)
         if type(signed) is not bool:
+            logger.error('Signed must be a boolean.')
             return Response(
-                    {'error': 'Invalid signed value.'},
+                    {'error': 'Signed must be a boolean.'},
                     status=status.HTTP_400_BAD_REQUEST
                     )
         support_contact = request.data.get('support_contact', None)
@@ -143,6 +158,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save(support_contact=support_contact)
         elif not signed and contract.signed:
+            logger.error('You cannot unsign a contract.')
             return Response(
                     {'error': 'You cannot unsign a contract.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -153,6 +169,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
         else:
+            logger.error('To sign a contract, you must provide a support contact')
             return Response(
                     {'error': 'To sign a contract, you must provide a support contact.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -167,7 +184,6 @@ class EventViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,
                           permissions.IsSupportOwnerOrReadOnly,
                           )
-    authentication_classes = (TokenAuthentication, SessionAuthentication)
     queryset = Event.objects.all()
 
     def get_queryset(self):
@@ -187,10 +203,17 @@ class EventViewSet(viewsets.ModelViewSet):
                     )
         date = request.query_params.get('date', None)
         if date is not None:
-            date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
-            self.queryset = self.queryset.filter(
-                    event_date__date=date_obj
-                    )
+            try:
+                date_obj = datetime.datetime.strptime(date, "%Y-%m-%d")
+                self.queryset = self.queryset.filter(
+                        event_date__date=date_obj
+                        )
+            except ValueError:
+                logger.error('Invalid date format.')
+                return Response(
+                        {'error': 'Invalid date format.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                        )
 
         return super().list(request, *args, **kwargs)
 
@@ -198,6 +221,7 @@ class EventViewSet(viewsets.ModelViewSet):
         """Update an event."""
         event = self.get_object()
         if event.event_closed:
+            logger.error('You cannot update a closed event.')
             return Response(
                     {'error': 'You cannot update a completed event.'},
                     status=status.HTTP_400_BAD_REQUEST
