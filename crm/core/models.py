@@ -88,6 +88,10 @@ class Customer(models.Model):
     sales_contact = models.ForeignKey('User', on_delete=models.SET_NULL,
                                       null=True, blank=True)
 
+    def __str__(self):
+        """Return a string representation of the model."""
+        return self.first_name + ' ' + self.last_name
+
 
 class Contract(models.Model):
     """Contract class to store contract details."""
@@ -103,6 +107,10 @@ class Contract(models.Model):
     event = models.OneToOneField('Event', on_delete=models.CASCADE,
                                  null=True, blank=True)
 
+    def __str__(self):
+        """Return a string representation of the model."""
+        return f"{self.customer.company} - {self.amount}"
+
 
 class Event(models.Model):
     """Event class to store information about events."""
@@ -116,3 +124,7 @@ class Event(models.Model):
     attendees = models.IntegerField(null=True, blank=True)
     event_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        """Return a string representation of the model."""
+        return f"{self.customer.company} - {self.event_date}"
