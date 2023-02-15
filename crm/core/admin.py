@@ -45,7 +45,29 @@ class UserAdmin(BaseUserAdmin):
             )
 
 
+class CustomerAdmin(admin.ModelAdmin):
+    """Define the admin pages for customers."""
+    ordering = ['id']
+    list_display = ['id', 'first_name', 'last_name',
+                    'email', 'phone', 'company', 'sales_contact']
+
+
+class ContractAdmin(admin.ModelAdmin):
+    """Define the admin pages for contracts."""
+    ordering = ['id']
+    list_display = ['id', 'customer', 'sales_contact', 'date_created',
+                    'date_updated', 'signed', 'amount',
+                    'payment_due', 'event']
+
+
+class EventAdmin(admin.ModelAdmin):
+    """Define the admin pages for events."""
+    ordering = ['id']
+    list_display = ['id', 'customer', 'support_contact', 'event_closed',
+                    'attendees', 'date_created', 'date_updated', 'notes']
+
+
 admin.site.register(models.User, UserAdmin)
-admin.site.register(models.Customer)
-admin.site.register(models.Contract)
-admin.site.register(models.Event)
+admin.site.register(models.Customer, CustomerAdmin)
+admin.site.register(models.Contract, ContractAdmin)
+admin.site.register(models.Event, EventAdmin)
