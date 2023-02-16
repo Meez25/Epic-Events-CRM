@@ -1,59 +1,31 @@
 # Epic-Events-CRM
 
-## Endpoints
+The API allows you to manage a CRM system for an event company.
 
-### For sales user
-with a filter to only see the customer who the user manage
+The admin uses the admin page as the management tool to create sales_user and support_user.
 
-- /customer/ POST
-- /customer/ GET
-- /customer/pk/ GET
-- /customer/pk/ PUT
-- /customer/pk/ PATCH
+Sales users can create customers and create contract attached to those customers. When a contract is signed, the sales user set the contract to the signed status and assign a support user to manage the event.
 
-- /customer/?mail=example@example.com GET
-- /customer/?name=example GET
+The event is automatically created when the contract is signed.
 
-- /customer/pk/contract/ GET
-- /customer/pk/contract/ POST
-- /customer/pk/contract/pk/ PUT
-- /customer/pk/contract/pk/ PATCH
+Once the support user is done with the event, he can set the status "finished" to the event.
+Quick start
 
-- /contract/?name=example GET
-- /contract/?mail=example@example.com GET
-- /contract/?date=01-01-2023 GET
-- /contract/?amount=550 GET
+    The admin must create an account for the different users.
+    Login to get your access token (POST /login/)
+    Create a customer as a sales user (POST /customer/)
+    Add a contract as a sales user (POST /customer/id/contract/)
+    Create the event by signed the contract and assign a support user (/customer/id/contract/)
+    Manage the event as the support user (/customer/id/contract/id/event/)
 
-- /customer/pk/contract/pk/event/ GET
-- /customer/pk/contract/pk/event/ POST
-- /customer/pk/contract/pk/event/pk/ GET
+A search feature is available for customer, contract and event :
 
-- /customer/pk/contract/pk/event/?name=example GET
-- /customer/pk/contract/pk/event/?mail=example@example.com GET
-- /customer/pk/contract/pk/event/?eventdate=2023-02-28 GET
+/customer?email=test@example.com, also work for last_name
 
+/contract?email=test@example.com, also work for last_name, date, amount
 
-### For support 
-with a filter to only see the customer who has an event managed by the user
+/event?email=test@example.com, also work for last_name and date
 
-- /customer/ GET 
-- /customer/pk/ GET
+Sales user can modify the customer and contract and support user can modify the events.
 
-- /customer/?mail=example@example.com GET
-- /customer/?name=example GET
-
-- /customer/pk/contract/ GET
-
-- /customer/pk/contract/?name=example GET
-- /customer/pk/contract/?mail=example@example.com GET
-- /customer/pk/contract/?date=01-01-2023 GET
-- /customer/pk/contract/?amount=550 GET
-
-- /customer/pk/contract/pk/event/ GET
-- /customer/pk/contract/pk/event/pk/ GET
-- /customer/pk/contract/pk/event/pk/ PUT
-- /customer/pk/contract/pk/event/pk/ PATCH
-
-- /customer/pk/contract/pk/event/?name=example GET
-- /customer/pk/contract/pk/event/?mail=example@example.com GET
-- /customer/pk/contract/pk/event/?eventdate=28-02-2023 GET
+Documentation of the API : https://documenter.getpostman.com/view/25179277/2s93CGRFmy

@@ -43,9 +43,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
             self.queryset = self.queryset.filter(
                     last_name__icontains=name
                     )
-        if request.user.role == 'support':
-            self.queryset = self.queryset.filter(
-                    event__support_contact=request.user)
         return super().list(request, *args, **kwargs)
 
 
@@ -96,9 +93,6 @@ class ContractViewSet(viewsets.ModelViewSet):
             self.queryset = self.queryset.filter(
                     amount__range=(amount-100, amount+100)
                     )
-        if request.user.role == 'support':
-            self.queryset = self.queryset.filter(
-                    event__support_contact=request.user)
         return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
@@ -174,10 +168,11 @@ class ContractViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                     )
         signed = request.data.get('signed', None)
-        if signed.lower() == 'true':
-            signed = True
-        elif signed.lower() == 'false':
-            signed = False
+        if type(signed) is not bool:
+            if signed.lower() == 'true':
+                signed = True
+            elif signed.lower() == 'false':
+                signed = False
         if type(signed) is not bool:
             logger.error('Signed must be a boolean.')
             return Response(
@@ -222,17 +217,21 @@ class EventViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return self.queryset.all()
 
+    def create(self, request, *args, **kwargs):
+        return Response(
+                {'error': 'You cannot create an event this way.'})
+
     def list(self, request, *args, **kwargs):
         """Return a list of events."""
         email = request.query_params.get('email', None)
         if email is not None:
             self.queryset = self.queryset.filter(
-                    contract__customer__email__iexact=email
+                    customer__email__iexact=email
                     )
         last_name = request.query_params.get('last_name', None)
         if last_name is not None:
             self.queryset = self.queryset.filter(
-                    contract__customer__last_name__icontains=last_name
+                    customer__last_name__icontains=last_name
                     )
         date = request.query_params.get('date', None)
         if date is not None:
@@ -261,6 +260,20 @@ class EventViewSet(viewsets.ModelViewSet):
                     )
         serializer = self.get_serializer(event, data=request.data,
                                          partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """Update an event."""
+        event = self.get_object()
+        if event.event_closed:
+            logger.error('You cannot update a closed event.')
+            return Response(
+                    {'error': 'You cannot update a completed event.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                    )
+        serializer = self.get_serializer(event, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

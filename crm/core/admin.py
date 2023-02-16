@@ -50,6 +50,8 @@ class CustomerAdmin(admin.ModelAdmin):
     ordering = ['id']
     list_display = ['id', 'first_name', 'last_name',
                     'email', 'phone', 'company', 'sales_contact']
+    search_fields = ['first_name', 'last_name', 'email', 'phone',
+                     'company', 'sales_contact']
 
 
 class ContractAdmin(admin.ModelAdmin):
@@ -58,6 +60,9 @@ class ContractAdmin(admin.ModelAdmin):
     list_display = ['id', 'customer', 'sales_contact', 'date_created',
                     'date_updated', 'signed', 'amount',
                     'payment_due', 'event']
+    search_fields = ['customer', 'sales_contact', 'date_created',
+                     'date_updated', 'signed', 'amount',
+                     'payment_due', 'event']
 
 
 class EventAdmin(admin.ModelAdmin):
@@ -65,6 +70,8 @@ class EventAdmin(admin.ModelAdmin):
     ordering = ['id']
     list_display = ['id', 'customer', 'support_contact', 'event_closed',
                     'attendees', 'date_created', 'date_updated', 'notes']
+    search_fields = ['customer', 'support_contact', 'event_closed',
+                     'attendees', 'date_created', 'date_updated', 'notes']
 
 
 admin.site.register(models.User, UserAdmin)

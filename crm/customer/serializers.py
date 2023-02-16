@@ -5,6 +5,7 @@ import datetime
 import logging
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.utils.timezone import make_aware
 
 from core.models import Customer, Contract, User, Event
 
@@ -63,7 +64,8 @@ class ContractSerializer(serializers.ModelSerializer):
                 'payment_due',
                 'event',
                 )
-        read_only_fields = ('id', 'date_created', 'date_updated')
+        read_only_fields = ('id', 'date_created', 'date_updated',
+                            'customer')
 
     def validate(self, data):
         """Check validation."""
@@ -138,4 +140,32 @@ class EventSerializer(serializers.ModelSerializer):
                 'event_date',
                 'notes',
                 )
-        read_only_fields = ('id', 'date_created', 'date_updated',)
+        read_only_fields = ('id', 'date_created', 'date_updated',
+                            'customer')
+
+    def validate(self, data):
+        """Check validation."""
+        customer_pk = self.context.get('customer_pk')
+        if customer_pk:
+            try:
+                data['customer'] = Customer.objects.get(pk=customer_pk)
+            except Customer.DoesNotExist:
+                raise serializers.ValidationError("Invalid customer ID.")
+        if 'event_date' in data:
+            if data['event_date'] < make_aware(datetime.datetime.now()):
+                logger.error("Event date is in the past.")
+                raise serializers.ValidationError(
+                    "Event date must be a future date.")
+        if 'attendees' in data:
+            if data['attendees'] < 0:
+                logger.error("Attendees is negative.")
+                raise serializers.ValidationError(
+                    "Attendees must be a positive number.")
+        return data
+
+    def update(self, instance, validated_data):
+        """Update an event."""
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+        return instance

@@ -744,11 +744,10 @@ class PrivateCustomerApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_support_user_can_see_the_contracts_of_event_he_manages(self):
-        """Test that support users can see the contracts of the
-        events he manages."""
+    def test_support_user_can_see_all_contracts(self):
+        """Test that support users can see all contracts."""
         customer = create_customer(self.sales_user, 'test@example.com')
-        Contract.objects.create(
+        contract1 = Contract.objects.create(
                 signed=False,
                 amount=2000.00,
                 payment_due=datetime.date.today(),
@@ -759,7 +758,7 @@ class PrivateCustomerApiTests(TestCase):
                 customer=customer,
                 support_contact=self.support_user,
                 )
-        contract = Contract.objects.create(
+        contract2 = Contract.objects.create(
                 signed=True,
                 amount=1000.00,
                 payment_due=datetime.date.today(),
@@ -771,9 +770,9 @@ class PrivateCustomerApiTests(TestCase):
         res = self.support_client.get(url)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        print(res.data)
-        self.assertEqual(len(res.data['results']), 1)
-        self.assertEqual(res.data["results"][0].get('id'), contract.id)
+        self.assertEqual(len(res.data['results']), 2)
+        self.assertEqual(res.data["results"][0].get('id'), contract1.id)
+        self.assertEqual(res.data["results"][1].get('id'), contract2.id)
 
     def test_sales_user_set_a_contract_on_signed_true_which_add_event(self):
         """Test that a sales user can set a contract on signed true which
@@ -1020,7 +1019,7 @@ class PrivateCustomerApiTests(TestCase):
         self.assertEqual(Event.objects.get(id=event.id).attendees, 10)
 
     def test_sales_user_see_all_events(self):
-        """Test that a support user can see all events."""
+        """Test that a sales user can see all events."""
         date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
         customer1 = create_customer(self.sales_user, "test@example.com")
         contract1 = Contract.objects.create(
@@ -1258,15 +1257,12 @@ class PrivateCustomerApiTests(TestCase):
     def test_support_user_can_only_see_his_assigned_customer(self):
         """Test that a support user can only see his assigned customer."""
         support_user2 = get_user_model().objects.create_user(
-                email='sales2@example.com',
+                email='support2@example.com',
                 role='support',
                 password='testpass',
                 )
         date_in_1_year = make_aware(
                 datetime.datetime.now() + datetime.timedelta(days=365))
-        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
-        date_in_2_year = make_aware(
-                datetime.datetime.now() + datetime.timedelta(days=365*2))
         customer1 = create_customer(self.sales_user, "test@example.com")
         create_customer(self.sales_user, "test2@example.com")
         create_customer(self.sales_user, "test3@example.com")
@@ -1319,3 +1315,50 @@ class PrivateCustomerApiTests(TestCase):
         res = self.support_client.get(CUSTOMER_URL, format='json')
 
         self.assertEqual(len(res.data['results']), 1)
+
+    def test_sales_user_can_only_see_all_events(self):
+        """Test that a sales user can see all events."""
+        sales_user2 = get_user_model().objects.create_user(
+                email='sales2@example.com',
+                role='sales',
+                password='testpass',
+                )
+        date_in_1_year = make_aware(
+                datetime.datetime.now() + datetime.timedelta(days=365))
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        customer2 = create_customer(sales_user2, "test2@example.com")
+        contract1 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer1,
+                sales_contact=self.sales_user,
+                )
+        event1 = Event.objects.create(
+                customer=customer1,
+                support_contact=self.support_user,
+                attendees=10,
+                event_date=date_in_1_year,
+                )
+        contract1.event = event1
+        contract1.save()
+        contract2 = Contract.objects.create(
+                signed=True,
+                amount=2000.00,
+                payment_due=date_in_1_year,
+                customer=customer2,
+                sales_contact=sales_user2,
+                )
+        event2 = Event.objects.create(
+                customer=customer2,
+                support_contact=self.support_user,
+                attendees=10,
+                event_date=date_in_1_year,
+                )
+        contract2.event = event2
+        contract2.save()
+        url = reverse("search-event-list")
+
+        res = self.sales_client.get(url, format='json')
+
+        self.assertEqual(len(res.data['results']), 2)

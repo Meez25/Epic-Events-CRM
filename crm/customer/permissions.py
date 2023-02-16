@@ -3,8 +3,6 @@ Handle permissions for the API.
 """
 from rest_framework import permissions
 
-from core.models import User
-
 
 class IsSalesOwnerOrReadOnly(permissions.BasePermission):
     """Custom permission to only allow sales to create a customer."""
