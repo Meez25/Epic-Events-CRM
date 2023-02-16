@@ -40,6 +40,7 @@ Sales user can modify the customer and contract and support user can modify the 
 
 Documentation of the API : https://documenter.getpostman.com/view/25179277/2s93CGRFmy
 
+```mermaid
 ---
 title: Order example
 ---
@@ -96,3 +97,4 @@ erDiagram
         string first_name
         string last_name
     }
+```
