@@ -42,7 +42,7 @@ Documentation of the API : https://documenter.getpostman.com/view/25179277/2s93C
 
 ```mermaid
 ---
-title: Order example
+title: ERD
 ---
 erDiagram
     SALES-USER ||--o{ CONTRACT : manage
