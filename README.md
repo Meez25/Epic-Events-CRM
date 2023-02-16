@@ -9,22 +9,34 @@ Sales users can create customers and create contract attached to those customers
 The event is automatically created when the contract is signed.
 
 Once the support user is done with the event, he can set the status "finished" to the event.
-Quick start
 
+## Quick start
+
+    ```
     The admin must create an account for the different users.
     Login to get your access token (POST /login/)
     Create a customer as a sales user (POST /customer/)
     Add a contract as a sales user (POST /customer/id/contract/)
     Create the event by signed the contract and assign a support user (/customer/id/contract/)
     Manage the event as the support user (/customer/id/contract/id/event/)
+    ```
 
 A search feature is available for customer, contract and event :
 
-/customer?email=test@example.com, also work for last_name
+```
+/customer?email=test@example.com
+```
+also work for last_name
 
-/contract?email=test@example.com, also work for last_name, date, amount
+```
+/contract?email=test@example.com
+```
+also work for last_name, date, amount
 
-/event?email=test@example.com, also work for last_name and date
+```
+/event?email=test@example.com
+```
+also work for last_name and date
 
 Sales user can modify the customer and contract and support user can modify the events.
 
