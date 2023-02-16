@@ -46,9 +46,9 @@ title: ERD
 ---
 erDiagram
     SALES-USER ||--o{ CONTRACT : manage
-    SALES-USER ||--o{ CLIENT : manage
-    CLIENT ||--o{ CONTRACT : has
-    CLIENT ||--o{ EVENT : has
+    SALES-USER ||--o{ CUSTOMER : manage
+    CUSTOMER ||--o{ CONTRACT : has
+    CUSTOMER ||--o{ EVENT : has
     CONTRACT ||--o| EVENT : has
     SUPPORT-USER ||--o{ EVENT : organize
 
@@ -59,7 +59,7 @@ erDiagram
         string first_name
         string last_name
     }
-    CLIENT {
+    CUSTOMER {
         string first_name
         string last_name
         string email
@@ -72,7 +72,7 @@ erDiagram
     }
     CONTRACT {
         int sales_contact FK
-        int client FK
+        int customer FK
         datetime date_created
         datetime date_updated
         bool signed
@@ -81,7 +81,7 @@ erDiagram
         int event FK
     }
     EVENT {
-        int client FK
+        int customer FK
         datetime date_created
         datetime date_updated
         int support_contact FK
