@@ -12,12 +12,12 @@ Once the support user is done with the event, he can set the status "finished" t
 
 ## Quick start
 
-    The admin must create an account for the different users.
-    Login to get your access token (POST /login/)
-    Create a customer as a sales user (POST /customer/)
-    Add a contract as a sales user (POST /customer/id/contract/)
-    Create the event by signed the contract and assign a support user (/customer/id/contract/)
-    Manage the event as the support user (/customer/id/contract/id/event/)
+- The admin must create an account for the different users.
+- Login to get your access token (POST /login/)
+- Create a customer as a sales user (POST /customer/)
+- Add a contract as a sales user (POST /customer/id/contract/)
+- Create the event by signed the contract and assign a support user (/customer/id/contract/)
+- Manage the event as the support user (/customer/id/contract/id/event/)
 
 A search feature is available for customer, contract and event :
 
