@@ -39,3 +39,60 @@ also work for last_name and date
 Sales user can modify the customer and contract and support user can modify the events.
 
 Documentation of the API : https://documenter.getpostman.com/view/25179277/2s93CGRFmy
+
+---
+title: Order example
+---
+erDiagram
+    SALES-USER ||--o{ CONTRACT : manage
+    SALES-USER ||--o{ CLIENT : manage
+    CLIENT ||--o{ CONTRACT : has
+    CLIENT ||--o{ EVENT : has
+    CONTRACT ||--o| EVENT : has
+    SUPPORT-USER ||--o{ EVENT : organize
+
+    SALES-USER {
+        string email
+        string password
+        string role
+        string first_name
+        string last_name
+    }
+    CLIENT {
+        string first_name
+        string last_name
+        string email
+        string phone
+        string mobile
+        string company
+        datetime date_created
+        datetime date_updated
+        int sales_contact FK
+    }
+    CONTRACT {
+        int sales_contact FK
+        int client FK
+        datetime date_created
+        datetime date_updated
+        bool signed
+        float amount
+        datetime payment_due
+        int event FK
+    }
+    EVENT {
+        int client FK
+        datetime date_created
+        datetime date_updated
+        int support_contact FK
+        bool event_closed
+        int attendees
+        datetime event_date
+        string notes
+    }
+    SUPPORT-USER {
+        string email
+        string password
+        string role
+        string first_name
+        string last_name
+    }

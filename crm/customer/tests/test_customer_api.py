@@ -1254,8 +1254,8 @@ class PrivateCustomerApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data['results']), 1)
 
-    def test_support_user_can_only_see_his_assigned_customer(self):
-        """Test that a support user can only see his assigned customer."""
+    def test_support_user_can_see_all_customer(self):
+        """Test that a support user can see all customers."""
         support_user2 = get_user_model().objects.create_user(
                 email='support2@example.com',
                 role='support',
@@ -1314,7 +1314,7 @@ class PrivateCustomerApiTests(TestCase):
 
         res = self.support_client.get(CUSTOMER_URL, format='json')
 
-        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(len(res.data['results']), 3)
 
     def test_sales_user_can_only_see_all_events(self):
         """Test that a sales user can see all events."""
