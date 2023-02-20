@@ -1360,3 +1360,25 @@ class PrivateCustomerApiTests(TestCase):
         res = self.sales_client.get(url, format='json')
 
         self.assertEqual(len(res.data['results']), 2)
+
+    def test_sales_user_cannot_create_a_contract_for_another_sales_user(self):
+        """Test that a sales user cannot create a contract for another sales
+        user."""
+        date_in_1_year = datetime.date.today() + datetime.timedelta(days=365)
+        date_as_string_in_1_year = date_in_1_year.strftime('%Y-%m-%d')
+        sales_user2 = get_user_model().objects.create_user(
+                email='sales2@example.com',
+                role='sales',
+                password='testpass',
+                )
+        customer1 = create_customer(self.sales_user, "test@example.com")
+        payload = {
+                'amount': 763,
+                'payment_due': date_as_string_in_1_year,
+                }
+        sales_user2_client = APIClient()
+        sales_user2_client.force_authenticate(sales_user2)
+        url = create_contract_url(customer1.id)
+        res = sales_user2_client.post(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)

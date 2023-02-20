@@ -65,7 +65,7 @@ class ContractSerializer(serializers.ModelSerializer):
                 'event',
                 )
         read_only_fields = ('id', 'date_created', 'date_updated',
-                            'customer', 'event')
+                            'customer', 'event', 'sales_contact')
 
     def validate(self, data):
         """Check validation."""
@@ -83,6 +83,12 @@ class ContractSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create a new contract."""
+        if 'signed' not in validated_data:
+            validated_data['signed'] = False
+        if 'support_contact' not in validated_data:
+            logger.error("Support contact is required.")
+            raise serializers.ValidationError(
+                "Support contact is required.")
         if (validated_data['signed'] and
                 validated_data['support_contact'] is not None):
             support_contact = User.objects.get(

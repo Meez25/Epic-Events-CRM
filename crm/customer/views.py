@@ -113,6 +113,12 @@ class ContractViewSet(viewsets.ModelViewSet):
                     {'error': 'Customer does not exist.'},
                     status=status.HTTP_400_BAD_REQUEST
                     )
+        if customer.sales_contact != request.user:
+            logger.error('Customer does not belong to user.')
+            return Response(
+                    {'error': 'Customer does not belong to user.'},
+                    status=status.HTTP_403_FORBIDDEN
+                    )
         support_contact = request.data.get('support_contact', None)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
