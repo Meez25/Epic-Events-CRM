@@ -65,7 +65,7 @@ class ContractSerializer(serializers.ModelSerializer):
                 'event',
                 )
         read_only_fields = ('id', 'date_created', 'date_updated',
-                            'customer')
+                            'customer', 'event')
 
     def validate(self, data):
         """Check validation."""
@@ -162,10 +162,3 @@ class EventSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Attendees must be a positive number.")
         return data
-
-    def update(self, instance, validated_data):
-        """Update an event."""
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-        instance.save()
-        return instance
