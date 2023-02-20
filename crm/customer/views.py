@@ -234,7 +234,7 @@ class EventViewSet(viewsets.ModelViewSet):
             self.queryset = self.queryset.filter(
                     customer__email__iexact=email
                     )
-        last_name = request.query_params.get('last_name', None)
+        last_name = request.query_params.get('name', None)
         if last_name is not None:
             self.queryset = self.queryset.filter(
                     customer__last_name__icontains=last_name

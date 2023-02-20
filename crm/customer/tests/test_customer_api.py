@@ -1149,7 +1149,7 @@ class PrivateCustomerApiTests(TestCase):
         contract2.event = event2
         contract2.save()
         url = reverse("search-event-list")
-        res = self.support_client.get(url, {'last_name': 'User'})
+        res = self.support_client.get(url, {'name': 'User'})
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data['results']), 1)
