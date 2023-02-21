@@ -43,7 +43,7 @@ class UserAdmin(BaseUserAdmin):
                     )
                 }),
             )
-    search_fields = ['email', 'first_name', 'last_name']
+    search_fields = ['email', 'first_name', 'last_name', 'role']
 
 
 class CustomerAdmin(admin.ModelAdmin):
